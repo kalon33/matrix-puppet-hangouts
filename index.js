@@ -88,7 +88,7 @@ class App extends MatrixPuppetBridgeBase {
           this.threadInfo[data.conversation_id] = {
             conversation_name: data.conversation_name,
           };
-          debugVerbose("incoming typing:", data);
+          const isTyping = data.typing === 'typing_started';
           const isMe = data.user_id.chat_id === data.self_user_id;
           const payload = {
             roomId: data.conversation_id,
@@ -97,13 +97,13 @@ class App extends MatrixPuppetBridgeBase {
             text: data.content,
             avatarUrl: data.photo_url,
           };
-          return this.handleThirdPartyRoomMessage(payload).catch(err => {
-            console.log("handleThirdPartyRoomMessage error", err);
-            sendStatusMsg({}, "handleThirdPartyRoomMessage error", err);
+          return this.handleThirdPartyRoomTypingMessage(payload, isTyping).catch(err => {
+            console.log("handleThirdPartyRoomTypingMessage error", err);
+            sendStatusMsg({}, "handleThirdPartyRoomTypingMessage error", err);
           });
         } catch(er) {
-          console.log("incoming message handling error:", er);
-          sendStatusMsg({}, "incoming message handling error:", err);
+          console.log("incoming typing indicator handling error:", er);
+          sendStatusMsg({}, "incoming typing indicator handling error:", err);
         }
       }
 
@@ -136,6 +136,28 @@ class App extends MatrixPuppetBridgeBase {
   }
   sendImageMessageAsPuppetToThirdPartyRoomWithId(id, data) {
     return this.thirdPartyClient.sendImage(id, data);
+  }
+  sendReadReceiptAsPuppetToThirdPartyRoomWithId(id, text) {
+    console.log("sendReadReceiptAsPuppetToThirdPartyRoomWithId text", text);
+    // return this.thirdPartyClient.send(id, text);
+  }
+
+  handleThirdPartyRoomTypingMessage(thirdPartyRoomMessageData, isTyping) {
+    const {
+      roomId,
+      senderName,
+      senderId,
+      avatarUrl,
+      text,
+      html
+    } = thirdPartyRoomMessageData;
+    return this.getOrCreateMatrixRoomFromThirdPartyRoomId(roomId).then((matrixRoomId) => {
+      return this.getUserClient(matrixRoomId, senderId, senderName, avatarUrl).then((client) => {
+          client.sendTyping(matrixRoomId, isTyping);
+      });
+    }).catch(err=>{
+      this.sendStatusMsg({}, 'Error in '+this.handleThirdPartyRoomMessage.name, err, thirdPartyRoomMessageData);
+    });
   }
 }
 
