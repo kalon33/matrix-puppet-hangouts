@@ -13,7 +13,7 @@ class Client extends EventEmitter {
     this.hangupsProc = null;
   }
   connect() {
-    this.hangupsProc = require("child_process").spawn('python3', ['-u', 'hangups_client.py']);
+    this.hangupsProc = require("child_process").spawn('python3.6', ['-u', 'hangups_client.py']);
 
     this.hangupsProc.stderr.on("data", (str) => {
       this.emit('status', str.toString());
